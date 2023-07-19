@@ -69,5 +69,21 @@ extern void interrupt_handler_14();
 extern void interrupt_handler_16();
 extern void interrupt_handler_17();
 extern void interrupt_handler_18();
+extern void interrupt_handler_32();
+extern void interrupt_handler_33();
+extern void interrupt_handler_34();
+extern void interrupt_handler_35();
+extern void interrupt_handler_36();
+extern void interrupt_handler_37();
+extern void interrupt_handler_38();
+extern void interrupt_handler_39();
+extern void interrupt_handler_40();
+extern void interrupt_handler_41();
+extern void interrupt_handler_42();
+extern void interrupt_handler_43();
+extern void interrupt_handler_44();
+extern void interrupt_handler_45();
+extern void interrupt_handler_46();
+extern void interrupt_handler_47();
 
 #endif

@@ -1,4 +1,4 @@
-SRC_FILES = debug.c entry.c int.c int.s
+SRC_FILES = debug.c entry.c int.c int.s pic.c
 DEPS = $(addprefix build/, $(addsuffix .d, $(SRC_FILES)))
 OBJ = $(addprefix build/, $(addsuffix .o, $(SRC_FILES)))
 SRC = $(addprefix src/, $(SRC_FILES))
