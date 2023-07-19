@@ -2,6 +2,7 @@
 #include <limine.h>
 
 #include "debug.h"
+#include "int.h"
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
@@ -31,6 +32,8 @@ void _start(void)
     debug_write_string(", information revision 0x");
     debug_write_uint64(info_request.response->revision);
     debug_write_byte('\n');
+
+    int_init();
 
     while (1) {
         __asm__("hlt");

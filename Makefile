@@ -1,4 +1,4 @@
-SRC_FILES = debug.c entry.c
+SRC_FILES = debug.c entry.c int.c int.s
 DEPS = $(addprefix build/, $(addsuffix .d, $(SRC_FILES)))
 OBJ = $(addprefix build/, $(addsuffix .o, $(SRC_FILES)))
 SRC = $(addprefix src/, $(SRC_FILES))
@@ -19,8 +19,11 @@ CFLAGS = -c -ffreestanding -fno-builtin -nostdlib -mno-red-zone -Wall -Wextra \
 LDFLAGS = -T linker.ld -melf_x86_64 -nostdlib -static -z text \
 		  -z max-page-size=0x1000
 
+QEMUFLAGS = -serial stdio
+
 ifdef DEBUG
-	CFLAGS += -DDEBUG=1
+	CFLAGS += -DDEBUG=1 -g
+	QEMUFLAGS += -d cpu_reset
 endif
 
 .PHONY: clean run
@@ -57,7 +60,7 @@ build/%.c.o: src/%.c
 	$(CC) $(CFLAGS) -MMD -MP $< -o $@
 
 run: $(OUT)
-	qemu-system-x86_64 -serial stdio -drive format=raw,media=cdrom,file=$(OUT)
+	qemu-system-x86_64 $(QEMUFLAGS) -drive format=raw,media=cdrom,file=$(OUT)
 
 clean:
 	rm -rf build/
