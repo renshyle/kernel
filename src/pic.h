@@ -14,7 +14,7 @@
 void pic_init(void);
 
 uint8_t pic_get_irq_mask(uint16_t pic);
-uint8_t pic_set_irq_mask(uint16_t pic, uint8_t mask);
+void pic_set_irq_mask(uint16_t pic, uint8_t mask);
 uint8_t pic_read_isr(uint16_t pic);
 
 bool pic_is_irq_spurious(int irq);

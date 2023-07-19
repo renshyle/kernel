@@ -43,7 +43,7 @@ uint8_t pic_get_irq_mask(uint16_t pic)
     return inb(pic);
 }
 
-uint8_t pic_set_irq_mask(uint16_t pic, uint8_t mask)
+void pic_set_irq_mask(uint16_t pic, uint8_t mask)
 {
     outb(pic, mask);
 }
