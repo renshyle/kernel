@@ -4,7 +4,7 @@
 #include "int.h"
 #include "pic.h"
 
-#define IDT_DEFAULT_GATE(i) idt_set_gate(i, (uint64_t) interrupt_handler_ ## i, 0x28, IDT_ATTR_PRESENT | IDT_ATTR_INTERRUPT_GATE);
+#define IDT_DEFAULT_GATE(i) idt_set_gate(i, (uint64_t) interrupt_handler_ ## i, 0x08, IDT_ATTR_PRESENT | IDT_ATTR_INTERRUPT_GATE);
 
 struct idtr idtr;
 

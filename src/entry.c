@@ -40,6 +40,7 @@ void _start(void)
     debug_write_uint64(info_request.response->revision);
     debug_write_byte('\n');
 
+    gdt_init();
     phys_init(memmap_request.response);
     int_init();
     pic_init();
