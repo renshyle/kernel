@@ -68,9 +68,9 @@ void idt_set_gate(int i, uint64_t handler, uint16_t cs, uint16_t attr)
 
 void interrupt(struct interrupt_frame frame)
 {
-    debug_write_string("interrupt 0x");
-    debug_write_uint64(frame.interrupt);
-    debug_write_string("\n");
+    //debug_write_string("interrupt 0x");
+    //debug_write_uint64(frame.interrupt);
+    //debug_write_string("\n");
 
     if (frame.interrupt >= 32 && frame.interrupt <= 47) {
         // irq

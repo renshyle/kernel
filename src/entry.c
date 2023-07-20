@@ -3,10 +3,16 @@
 
 #include "debug.h"
 #include "int.h"
+#include "phys.h"
 #include "pic.h"
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0
+};
+
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
     .revision = 0
 };
 
@@ -34,6 +40,7 @@ void _start(void)
     debug_write_uint64(info_request.response->revision);
     debug_write_byte('\n');
 
+    phys_init(memmap_request.response);
     int_init();
     pic_init();
 

@@ -1,4 +1,4 @@
-SRC_FILES = debug.c entry.c int.c int.s pic.c
+SRC_FILES = debug.c entry.c int.c int.s panic.c phys.c pic.c
 DEPS = $(addprefix build/, $(addsuffix .d, $(SRC_FILES)))
 OBJ = $(addprefix build/, $(addsuffix .o, $(SRC_FILES)))
 SRC = $(addprefix src/, $(SRC_FILES))
@@ -15,7 +15,7 @@ LD = ld.lld
 ASFLAGS = -f elf64 -Werror
 CFLAGS = -c -ffreestanding -fno-builtin -nostdlib -mno-red-zone -Wall -Wextra \
 		 -fno-stack-protector -fno-lto -mno-80387 -mno-mmx -mno-sse -mno-sse2 \
-		 --target=x86_64-elf
+		 --target=x86_64-elf -mcmodel=large
 LDFLAGS = -T linker.ld -melf_x86_64 -nostdlib -static -z text \
 		  -z max-page-size=0x1000
 
