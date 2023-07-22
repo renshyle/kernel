@@ -27,7 +27,7 @@ void pic_init(void)
     io_wait();
     outb(PIC1_DATA, ICW4_8086);
     io_wait();
-    outb(PIC1_DATA, ICW4_8086);
+    outb(PIC2_DATA, ICW4_8086);
     io_wait();
 
     // set ocw3 modes to isr read
