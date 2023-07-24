@@ -2,7 +2,11 @@
 
 #include "debug.h"
 #include "int.h"
+#include "panic.h"
 #include "pic.h"
+#include "task.h"
+
+#define IRQ_PIT 0
 
 #define IDT_DEFAULT_GATE(i) idt_set_gate(i, (uint64_t) interrupt_handler_ ## i, 0x08, IDT_ATTR_PRESENT | IDT_ATTR_INTERRUPT_GATE);
 
@@ -68,18 +72,63 @@ void idt_set_gate(int i, uint64_t handler, uint16_t cs, uint16_t attr)
 
 void interrupt(struct interrupt_frame frame)
 {
-    //debug_write_string("interrupt 0x");
-    //debug_write_uint64(frame.interrupt);
-    //debug_write_string("\n");
-
     if (frame.interrupt >= 32 && frame.interrupt <= 47) {
         // irq
+        uint64_t irq = frame.interrupt - 32;
 
-        if (pic_is_irq_spurious(frame.interrupt - 32)) {
-            debug_write_string("spurious interrupt\n");
+        if (pic_is_irq_spurious(irq)) {
+            debug_write_string("spurious interrupt 0x");
+            debug_write_uint64(irq);
+            debug_write_string("\n");
             return;
         }
 
-        pic_eoi(frame.interrupt - 32);
+        if (irq == IRQ_PIT) {
+            if ((frame.cs & 3) == 3) {
+                // pit irq happened while in userspace, meaning we can save the task state and schedule the next task
+                struct task *task = current_task;
+
+                if (task->ticks == 0) {
+                    task->r15 = frame.r15;
+                    task->r14 = frame.r14;
+                    task->r13 = frame.r13;
+                    task->r12 = frame.r12;
+                    task->r11 = frame.r11;
+                    task->r10 = frame.r10;
+                    task->r9 = frame.r9;
+                    task->r8 = frame.r8;
+                    task->rbp = frame.rbp;
+                    task->rdi = frame.rdi;
+                    task->rsi = frame.rsi;
+                    task->rdx = frame.rdx;
+                    task->rcx = frame.rcx;
+                    task->rbx = frame.rbx;
+                    task->rax = frame.rax;
+                    task->rip = frame.rip;
+                    task->rflags = frame.rflags;
+                    task->rsp = frame.rsp;
+
+                    // i guess you can technically change these from userspace so might as well save them
+                    // the other segment selectors are forced to 0x23, though
+                    task->ss = frame.ss;
+                    task->cs = frame.cs;
+
+                    pic_eoi(irq);
+                    task_schedule();
+                }
+            }
+        }
+
+        pic_eoi(irq);
+    } else {
+        debug_write_string("interrupt 0x");
+        debug_write_uint64(frame.interrupt);
+        debug_write_string("\nerror code: 0x");
+        debug_write_uint64(frame.error_code);
+        debug_write_string("\nrip: 0x");
+        debug_write_uint64(frame.rip);
+        debug_write_string("\n");
+
+        panic("unexpected interrupt");
     }
 }

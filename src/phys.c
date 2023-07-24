@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "panic.h"
 #include "phys.h"
+#include "virt.h"
 
 struct {
     uint64_t idx;
@@ -136,4 +137,10 @@ uint64_t phys_alloc_page(void)
     }
 
     return phys_mem_stack.stack[--phys_mem_stack.idx];
+}
+
+// only for virt_init
+void phys_virt_reset_mem_stack_address(void)
+{
+    phys_mem_stack.stack = PHYSICAL_TO_VIRTUAL(phys_mem_stack.stack);
 }

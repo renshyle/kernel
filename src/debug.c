@@ -1,3 +1,6 @@
+// this is copy pasted code to have some kind of debugging in the kernel
+// this code will be rewritten or removed at some point, this is only temporary
+
 #include <stdint.h>
 
 #include "io.h"
@@ -12,12 +15,12 @@ void debug_init(void)
     outb(COM1 + 0, 0x03);
     outb(COM1 + 1, 0x00);
     outb(COM1 + 3, 0x03);
-    outb(COM1 + 2, 0xC7);
-    outb(COM1 + 4, 0x0B);
-    outb(COM1 + 4, 0x1E);
-    outb(COM1 + 0, 0xAE);
+    outb(COM1 + 2, 0xc7);
+    outb(COM1 + 4, 0x0b);
+    outb(COM1 + 4, 0x1e);
+    outb(COM1 + 0, 0xae);
 
-    // Assume serial works
+    // assume serial works
     outb(COM1 + 4, 0x0f);
 #endif
 }
