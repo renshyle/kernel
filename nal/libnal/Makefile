@@ -1,9 +1,8 @@
-SRC_FILES = main.c
+SRC_FILES = syscall.s
 DEPS = $(addprefix build/, $(addsuffix .d, $(SRC_FILES)))
 OBJ = $(addprefix build/, $(addsuffix .o, $(SRC_FILES)))
 SRC = $(addprefix src/, $(SRC_FILES))
-OUT = $(NAL_DIR)/iso/nal/helloworld
-LIBS = $(NAL_DIR)/nal/lib/crt0.o $(NAL_DIR)/nal/lib/libnal.a
+OUT = $(NAL_DIR)/nal/lib/libnal.a
 
 include ../toolchain.mk
 
@@ -11,15 +10,19 @@ include ../toolchain.mk
 
 all: $(OUT)
 
-$(OUT): $(OBJ) $(LIBS)
+$(OUT): $(OBJ)
 	@mkdir -p $(dir $(OUT))
-	$(LD) $(LDFLAGS) $(NAL_DIR)/nal/lib/crt0.o -lnal $(OBJ) -o $@
+	ar -crs $@ $(OBJ)
 
 -include $(DEPS)
 
 build/%.c.o: src/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP $< -o $@
+
+build/%.s.o: src/%.s
+	@mkdir -p $(@D)
+	$(AS) $(ASFLAGS) -MD -MP -MF build/$*.s.d $< -o $@
 
 clean:
 	rm -rf build/

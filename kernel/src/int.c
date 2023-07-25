@@ -7,6 +7,7 @@
 #include "task.h"
 
 #define IRQ_PIT 0
+#define IRQ_NMI 2
 
 #define IDT_DEFAULT_GATE(i) idt_set_gate(i, (uint64_t) interrupt_handler_ ## i, 0x08, IDT_ATTR_PRESENT | IDT_ATTR_INTERRUPT_GATE);
 
@@ -83,7 +84,9 @@ void interrupt(struct interrupt_frame frame)
             return;
         }
 
-        if (irq == IRQ_PIT) {
+        if (irq == IRQ_NMI) {
+            panic("nmi");
+        } else if (irq == IRQ_PIT) {
             if ((frame.cs & 3) == 3) {
                 // pit irq happened while in userspace, meaning we can save the task state and schedule the next task
                 struct task *task = current_task;

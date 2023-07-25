@@ -175,8 +175,8 @@ int task_create(void *program, uint64_t size)
     }
 
     task->rip = header->e_entry;
-    task->cs = 0x18 | 3;
-    task->ss = 0x20 | 3;
+    task->cs = 0x20 | 3;
+    task->ss = 0x18 | 3;
     task->rflags = 0x202; // interrupts enabled
     task->rsp = stack_address + TASK_STACK_SIZE;
     task->kernel_stack = kernel_stack_address + TASK_KERNEL_STACK_SIZE;

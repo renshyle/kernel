@@ -9,6 +9,7 @@
 #include "phys.h"
 #include "pit.h"
 #include "pic.h"
+#include "syscall.h"
 #include "task.h"
 #include "virt.h"
 
@@ -76,6 +77,7 @@ void kentry(void)
     int_init();
     pic_init();
     task_init();
+    syscall_init();
     virt_init(kernel_address_request.response->physical_base);
     // from this point all physical addresses should be accessed with PHYSICAL_TO_VIRTUAL()
     // and limine provided memory should be accessesd using LIMINE_ADDR_TO_VIRTUAL()

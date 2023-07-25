@@ -28,8 +28,8 @@ void gdt_init(void)
     gdt_set_descriptor(0, 0, 0, 0, 0); // null descriptor
     gdt_set_descriptor(1, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL0 | GDT_ATTR_NORMAL | GDT_ATTR_EXECUTABLE | GDT_ATTR_CODE_READABLE, GDT_FLAG_LONG_MODE); // 64-bit code
     gdt_set_descriptor(2, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL0 | GDT_ATTR_NORMAL | GDT_ATTR_DATA_WRITABLE, GDT_FLAG_LONG_MODE); // 64-bit data
-    gdt_set_descriptor(3, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL3 | GDT_ATTR_NORMAL | GDT_ATTR_EXECUTABLE | GDT_ATTR_CODE_READABLE, GDT_FLAG_LONG_MODE); // 64-bit ring 3 code
-    gdt_set_descriptor(4, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL3 | GDT_ATTR_NORMAL | GDT_ATTR_DATA_WRITABLE, GDT_FLAG_LONG_MODE); // 64-bit ring 3 data
+    gdt_set_descriptor(3, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL3 | GDT_ATTR_NORMAL | GDT_ATTR_DATA_WRITABLE, GDT_FLAG_LONG_MODE); // 64-bit ring 3 data
+    gdt_set_descriptor(4, 0x00000000, 0xfffff, GDT_ATTR_PRESENT | GDT_ATTR_DPL3 | GDT_ATTR_NORMAL | GDT_ATTR_EXECUTABLE | GDT_ATTR_CODE_READABLE, GDT_FLAG_LONG_MODE); // 64-bit ring 3 code
     gdt_set_descriptor(5, (uint32_t) ((uint64_t) &tss & 0xffffffff), sizeof(struct tss) - 1, GDT_ATTR_PRESENT | GDT_ATTR_DPL0 | GDT_ATTR_SYSTEM | GDT_SYSTEM_ATTR_TSS_64_AVAILABLE, GDT_FLAG_LONG_MODE); // tss
     *((uint64_t*) &gdt_descriptors[6]) = ((uint64_t) &tss >> 32) & 0xffffffff; // a bit of a hack, sets the highest 32 bits of the tss base to the tss descriptor
 

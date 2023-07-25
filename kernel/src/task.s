@@ -23,7 +23,7 @@ task_user_switch:
     pop rcx
     pop rbx
 
-    mov ax, 0x23
+    mov ax, 0x1b
     mov ds, ax
     mov es, ax
     mov fs, ax
