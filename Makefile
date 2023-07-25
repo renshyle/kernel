@@ -1,4 +1,5 @@
-COMPONENTS = kernel
+COMPONENTS = kernel nal
+COMPONENTSCLEAN = $(addsuffix .clean,$(COMPONENTS))
 ISO_ROOT = iso
 KERNEL_ELF = kernel/build/nal.elf
 OUT = nal.iso
@@ -8,6 +9,9 @@ LIMINE_CFG=limine.cfg
 
 QEMUFLAGS = -serial stdio
 
+NAL_DIR = $(CURDIR)
+export NAL_DIR
+
 ifndef LIMINE_DIR
 	LIMINE_DIR = /usr/share/limine
 endif
@@ -16,7 +20,7 @@ ifdef DEBUG
 	QEMUFLAGS += -d cpu_reset
 endif
 
-.PHONY: all run clean $(COMPONENTS)
+.PHONY: all run clean iso-clean $(COMPONENTS) $(COMPONENTSCLEAN)
 
 all: $(OUT)
 
@@ -42,6 +46,10 @@ $(ISO_ROOT)/EFI/BOOT/%: $(LIMINE_DIR)/%
 run: $(OUT)
 	qemu-system-x86_64 $(QEMUFLAGS) -drive format=raw,media=cdrom,file=$(OUT)
 
-clean:
+clean: $(COMPONENTSCLEAN) iso-clean
+
+iso-clean:
 	rm -rf $(ISO_ROOT) $(OUT)
-	$(foreach component, $(COMPONENTS), $(MAKE) -C $(component) clean)
+
+$(COMPONENTSCLEAN): %.clean:
+	$(MAKE) -C $* clean
