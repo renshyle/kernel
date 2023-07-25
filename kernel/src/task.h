@@ -45,8 +45,6 @@ struct __attribute__((__packed__)) task {
     uint64_t rsp;
     uint64_t ss;
 
-    // if kernel_stack's offset in struct task changes, update syscall.s
-    uint64_t kernel_stack;
     uint64_t ticks;
 
     // llist

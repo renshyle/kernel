@@ -1,12 +1,14 @@
 global _start
+global kernel_stack
 extern kentry
 
 section .bss
 
-stack: resb 65536
+resb 65536
+kernel_stack:
 
 section .text
 
 _start:
-    mov rsp, stack + 65536
+    mov rsp, kernel_stack
     jmp kentry

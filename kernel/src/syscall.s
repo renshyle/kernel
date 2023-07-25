@@ -3,7 +3,7 @@
 global syscall_entry
 extern syscall
 
-extern current_task
+extern kernel_stack
 
 STRUCT_TASK_KERNEL_STACK_OFFSET equ 168
 
@@ -19,8 +19,7 @@ STRUCT_TASK_KERNEL_STACK_OFFSET equ 168
 syscall_entry:
     ; set up the kernel stack
     mov rax, rsp
-    mov rsp, [current_task]
-    mov rsp, [rsp + STRUCT_TASK_KERNEL_STACK_OFFSET]
+    mov rsp, kernel_stack
     push rax
     push r11
     push rcx

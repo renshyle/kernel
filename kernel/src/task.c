@@ -60,9 +60,12 @@ struct tss tss;
 struct task *task_llist;
 struct task *current_task;
 
+extern int kernel_stack;
+
 void task_init(void)
 {
     tss.iopb = sizeof(struct tss); // iopb not used
+    tss.rsp0 = (uint64_t) &kernel_stack; // single kernel stack for all tasks
     tss_load();
 }
 
@@ -156,30 +159,11 @@ int task_create(void *program, uint64_t size)
         virt_map(page_map, stack_address + i * PAGE_SIZE, page, true);
     }
 
-    // allocate kernel stack
-
-    uint64_t kernel_stack_address = virt_find_free_area(page_map, TASK_KERNEL_STACK_SIZE / PAGE_SIZE, false);
-
-    if (kernel_stack_address == 0) {
-        panic("out of memory");
-    }
-
-    for (int i = 0; i < TASK_KERNEL_STACK_SIZE / PAGE_SIZE; i++) {
-        uint64_t page = phys_alloc_page();
-
-        if (page == 0) {
-            panic("out of memory");
-        }
-
-        virt_map(page_map, kernel_stack_address + i * PAGE_SIZE, page, false);
-    }
-
     task->rip = header->e_entry;
     task->cs = 0x20 | 3;
     task->ss = 0x18 | 3;
     task->rflags = 0x202; // interrupts enabled
     task->rsp = stack_address + TASK_STACK_SIZE;
-    task->kernel_stack = kernel_stack_address + TASK_KERNEL_STACK_SIZE;
 
     if (task_llist == NULL) {
         task_llist = task;
@@ -197,8 +181,6 @@ extern noreturn void task_user_switch(struct task task);
 noreturn void task_switch(struct task *task)
 {
     set_cr3(kvirtual_to_physical((uint64_t) task->page_map));
-
-    tss.rsp0 = task->kernel_stack;
 
     task->ticks = (PIT_FREQUENCY_HZ * TASK_TIME_SLICE_MS) / 1000;
 
