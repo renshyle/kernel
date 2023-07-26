@@ -116,6 +116,12 @@ int task_create(void *program, uint64_t size)
             return -1;
         }
 
+        if (program_header.p_vaddr > MAX_USERSPACE_ADDRESS || program_header.p_vaddr + program_header.p_memsz > MAX_USERSPACE_ADDRESS) {
+            debug_write_string("invalid load address\n");
+            // FIXME: cleanup
+            return -1;
+        }
+
         uint64_t req_pages = (program_header.p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
         uint64_t to_write = program_header.p_filesz;
         for (uint64_t j = 0; j < req_pages; j++) {
@@ -137,13 +143,13 @@ int task_create(void *program, uint64_t size)
                 memset(PHYSICAL_TO_VIRTUAL(page), 0, PAGE_SIZE);
             }
 
-            virt_map(page_map, program_header.p_vaddr, page, true);
+            virt_map(page_map, program_header.p_vaddr, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
         }
     }
 
     // allocate task stack
 
-    uint64_t stack_address = virt_find_free_area(page_map, TASK_STACK_SIZE / PAGE_SIZE, true);
+    uint64_t stack_address = virt_find_free_area(page_map, TASK_STACK_SIZE / PAGE_SIZE, VIRT_FLAG_USER);
 
     if (stack_address == 0) {
         panic("out of memory");
@@ -156,7 +162,7 @@ int task_create(void *program, uint64_t size)
             panic("out of memory");
         }
 
-        virt_map(page_map, stack_address + i * PAGE_SIZE, page, true);
+        virt_map(page_map, stack_address + i * PAGE_SIZE, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
     }
 
     task->rip = header->e_entry;
@@ -173,6 +179,34 @@ int task_create(void *program, uint64_t size)
     }
 
     return 0;
+}
+
+void task_end(struct task *task)
+{
+    if (current_task == task) {
+        current_task = NULL;
+    }
+
+    // remove task from the task linked list
+
+    if (task_llist == task) {
+        task_llist = task->next;
+    } else {
+        struct task *task1 = task_llist;
+
+        while (task1 != NULL) {
+            if (task1->next == task) {
+                task1->next = task->next;
+                break;
+            }
+
+            task1 = task->next;
+        }
+    }
+
+    virt_destroy_page_map(task->page_map);
+
+    phys_free_page(kvirtual_to_physical((uint64_t) task));
 }
 
 // task_user_switch should only be called by task_switch

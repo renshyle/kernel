@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "msr.h"
 #include "syscall.h"
+#include "task.h"
 
 void syscall_init(void)
 {
@@ -22,6 +23,11 @@ uint64_t syscall(uint64_t syscallnum, uint64_t parameters[5])
         debug_write_string("  0x");
         debug_write_uint64(parameters[i]);
         debug_write_string("\n");
+    }
+
+    if (syscallnum == SYS_EXIT) {
+        task_end(current_task);
+        task_schedule();
     }
 
     return 0;

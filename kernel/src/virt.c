@@ -12,6 +12,9 @@
 #define PAGE_WRITABLE 0x02
 #define PAGE_USER_ACCESS 0x04
 #define PAGE_HUGE 0x80
+// PAGE_ALLOCATED means that the page can be free using phys_free_page()
+// 0x200 is a free bit in the paging structures
+#define PAGE_ALLOCATED 0x200
 #define PAGE_ADDRESS_MASK 0x000fffffffff000
 
 #define PAGES_LVL4 134217728
@@ -108,8 +111,57 @@ pml4e *virt_create_page_map(void)
     return pml4;
 }
 
-uint64_t virt_find_free_area(pml4e *page_map, uint64_t pages, bool user)
+// only should be called for page maps allocated using virt_create_page_map()
+void virt_destroy_page_map(pml4e *page_map)
 {
+    // reset the current page map to kernel_pml4 if the current page map is the one being destroyed
+    uint64_t cr3 = get_cr3();
+    if (cr3 == kvirtual_to_physical((uint64_t) page_map)) {
+        set_cr3(kvirtual_to_physical((uint64_t) kernel_pml4));
+    }
+
+    for (int i = 0; i < (int) (MAX_USERSPACE_ADDRESS / 512 / 1024 / 1024 / 1024); i++) {
+        if (page_map[i] & PAGE_PRESENT) {
+            pdpe *pdp = PHYSICAL_TO_VIRTUAL(page_map[i] & PAGE_ADDRESS_MASK);
+
+            for (int j = 0; j < 512; j++) {
+                if (pdp[j] & PAGE_PRESENT) {
+                    pde *pd = PHYSICAL_TO_VIRTUAL(pdp[j] & PAGE_ADDRESS_MASK);
+
+                    for (int k = 0; k < 512; k++) {
+                        if (pd[k] & PAGE_PRESENT) {
+                            pte *pt = PHYSICAL_TO_VIRTUAL(pd[k] & PAGE_ADDRESS_MASK);
+
+                            for (int l = 0; l < 512; l++) {
+                                if (pt[l] & PAGE_PRESENT && pt[l] & PAGE_ALLOCATED) {
+                                    phys_free_page(pt[l] & PAGE_ADDRESS_MASK);
+                                }
+                            }
+
+                            if (pd[k] & PAGE_ALLOCATED) {
+                                phys_free_page(pd[k] & PAGE_ADDRESS_MASK);
+                            }
+                        }
+                    }
+
+                    if (pdp[j] & PAGE_ALLOCATED) {
+                        phys_free_page(pdp[j] & PAGE_ADDRESS_MASK);
+                    }
+                }
+            }
+
+            if (page_map[i] & PAGE_ALLOCATED) {
+                phys_free_page(page_map[i] & PAGE_ADDRESS_MASK);
+            }
+        }
+    }
+
+    phys_free_page(kvirtual_to_physical((uint64_t) page_map));
+}
+
+uint64_t virt_find_free_area(pml4e *page_map, uint64_t pages, uint64_t flags)
+{
+    bool user = flags & VIRT_FLAG_USER;
     uint64_t search_start = user ? 0x1000 : 0xffffff8000000000;
     uint64_t search_end = user ? 0x7ffffffff000 : 0xfffffffffffff000;
 
@@ -158,8 +210,9 @@ bool virt_is_page_free(pml4e *page_map, uint64_t address)
     return false;
 }
 
-void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, bool user)
+void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, uint64_t flags)
 {
+    bool user = flags & VIRT_FLAG_USER;
     int pml4i = (virt_address >> 39) & 0x1ff;
     int pdpi = (virt_address >> 30) & 0x1ff;
     int pdi = (virt_address >> 21) & 0x1ff;
@@ -173,7 +226,7 @@ void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, boo
         }
 
         memset(PHYSICAL_TO_VIRTUAL(page), 0, PAGE_SIZE);
-        page_map[pml4i] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0);
+        page_map[pml4i] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0) | PAGE_ALLOCATED;
     }
 
     pdpe *pdp = PHYSICAL_TO_VIRTUAL(page_map[pml4i] & PAGE_ADDRESS_MASK);
@@ -185,7 +238,7 @@ void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, boo
         }
 
         memset(PHYSICAL_TO_VIRTUAL(page), 0, PAGE_SIZE);
-        pdp[pdpi] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0);
+        pdp[pdpi] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0) | PAGE_ALLOCATED;
     }
 
     pde *pd = PHYSICAL_TO_VIRTUAL(pdp[pdpi] & PAGE_ADDRESS_MASK);
@@ -197,11 +250,11 @@ void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, boo
         }
 
         memset(PHYSICAL_TO_VIRTUAL(page), 0, PAGE_SIZE);
-        pd[pdi] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0);
+        pd[pdi] = page | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0) | PAGE_ALLOCATED;
     }
 
     pte *pt = PHYSICAL_TO_VIRTUAL(pd[pdi] & PAGE_ADDRESS_MASK);
-    pt[pti] = phys_address | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0);
+    pt[pti] = phys_address | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0) | ((flags & VIRT_FLAG_ALLOC) ? PAGE_ALLOCATED : 0);
 }
 
 uint64_t kvirtual_to_physical(uint64_t address)

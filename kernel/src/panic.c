@@ -13,7 +13,7 @@ void panic(char *msg)
 
     // stack trace
     debug_write_string("stack trace:\n");
-    
+
     uint64_t rbp = get_previous_rbp(0);
     while (rbp != 0) {
         debug_write_string("0x");

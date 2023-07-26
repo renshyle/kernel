@@ -58,6 +58,7 @@ extern struct task *current_task;
 void task_init(void);
 
 int task_create(void *program, uint64_t size);
+void task_end(struct task *task);
 
 noreturn void task_switch(struct task *task);
 noreturn void task_schedule(void);
