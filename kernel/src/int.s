@@ -39,7 +39,6 @@ common_interrupt_handler:
     push r14
     push r15
 
-    xor rbp, rbp
     cld
     call interrupt
 

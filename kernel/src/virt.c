@@ -257,6 +257,37 @@ void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, uin
     pt[pti] = phys_address | PAGE_PRESENT | PAGE_WRITABLE | (user ? PAGE_USER_ACCESS : 0) | ((flags & VIRT_FLAG_ALLOC) ? PAGE_ALLOCATED : 0);
 }
 
+void virt_unmap(pml4e *page_map, uint64_t virt_address)
+{
+    int pml4i = (virt_address >> 39) & 0x1ff;
+    int pdpi = (virt_address >> 30) & 0x1ff;
+    int pdi = (virt_address >> 21) & 0x1ff;
+    int pti = (virt_address >> 12) & 0x1ff;
+
+    if ((page_map[pml4i] & PAGE_PRESENT) == 0) {
+        return;
+    }
+
+    pdpe *pdp = PHYSICAL_TO_VIRTUAL(page_map[pml4i] & PAGE_ADDRESS_MASK);
+    if ((pdp[pdpi] & PAGE_PRESENT) == 0) {
+        return;
+    }
+
+    pde *pd = PHYSICAL_TO_VIRTUAL(pdp[pdpi] & PAGE_ADDRESS_MASK);
+    if ((pd[pdi] & PAGE_PRESENT) == 0) {
+        return;
+    }
+
+    pte *pt = PHYSICAL_TO_VIRTUAL(pd[pdi] & PAGE_ADDRESS_MASK);
+
+    if (pt[pti] & PAGE_PRESENT && pt[pti] & PAGE_ALLOCATED) {
+        phys_free_page(pt[pti] & PAGE_ADDRESS_MASK);
+    }
+
+    pt[pti] = 0;
+    invlpg(virt_address);
+}
+
 uint64_t kvirtual_to_physical(uint64_t address)
 {
     if (address < PHYSICAL_MEMORY) {

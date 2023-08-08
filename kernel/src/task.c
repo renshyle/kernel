@@ -1,3 +1,4 @@
+#include <libnalloc.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
@@ -81,7 +82,7 @@ int task_create(void *program, uint64_t size)
     CHECK_OR_RET(header->e_phentsize == sizeof(struct elf_program_header), "wrong program header size\n")
     CHECK_OR_RET(size >= header->e_phoff + header->e_phnum * sizeof(struct elf_program_header), "program headers missing\n")
 
-    struct task *task = PHYSICAL_TO_VIRTUAL(phys_alloc_page()); // wastes 4 kb - sizeof(struct task) memory
+    struct task *task = malloc(sizeof(struct task));
     memset(task, 0, PAGE_SIZE);
 
     pml4e *page_map = virt_create_page_map();
@@ -206,7 +207,7 @@ void task_end(struct task *task)
 
     virt_destroy_page_map(task->page_map);
 
-    phys_free_page(kvirtual_to_physical((uint64_t) task));
+    free(task);
 }
 
 // task_user_switch should only be called by task_switch

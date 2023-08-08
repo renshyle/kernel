@@ -21,16 +21,20 @@ typedef uint64_t pde;
 // 4 kb
 typedef uint64_t pte;
 
+extern pml4e kernel_pml4[512];
+
 void virt_init(uint64_t kernel_phys_address);
 
 pml4e *virt_create_page_map(void);
 void virt_destroy_page_map(pml4e *page_map);
 void virt_map(pml4e *page_map, uint64_t virt_address, uint64_t phys_address, uint64_t flags);
+void virt_unmap(pml4e *page_map, uint64_t virt_address);
 uint64_t virt_find_free_area(pml4e *page_map, uint64_t pages, uint64_t flags);
 bool virt_is_page_free(pml4e *page_map, uint64_t address);
 uint64_t kvirtual_to_physical(uint64_t address);
 
 void set_cr3(uint64_t cr3);
 uint64_t get_cr3(void);
+void invlpg(uint64_t address);
 
 #endif

@@ -1,0 +1,3 @@
+[submodule "libnalloc"]
+	path = libnalloc
+	url = https://github.com/renshyle/libnalloc
