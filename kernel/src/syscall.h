@@ -1,7 +1,7 @@
 #ifndef SYSCALL_H
 #define SYSCALL_H
 
-#define SYS_EXIT 0
+#include "syscalls.h"
 
 void syscall_init(void);
 

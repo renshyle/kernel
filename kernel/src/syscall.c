@@ -13,7 +13,7 @@ void syscall_init(void)
     wrmsr(MSR_IA32_EFER, efer | 1); // enable the syscall instruction
 }
 
-uint64_t syscall(uint64_t syscallnum, uint64_t parameters[5])
+uint64_t syscall(enum syscall syscallnum, uint64_t parameters[5])
 {
     debug_write_string("syscall 0x");
     debug_write_uint64(syscallnum);
