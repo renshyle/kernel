@@ -132,11 +132,11 @@ int task_create(void *program, uint64_t size)
                 panic("out of memory");
             }
 
-            if (to_write > PAGE_SIZE) {
-                memcpy(PHYSICAL_TO_VIRTUAL(page), (char*) program + program_header.p_offset, PAGE_SIZE); // assumes pages returned by phys_alloc_page are identity mapped
+            if (to_write >= PAGE_SIZE) {
+                memcpy(PHYSICAL_TO_VIRTUAL(page), (char*) program + program_header.p_offset + j * PAGE_SIZE, PAGE_SIZE);
                 to_write -= PAGE_SIZE;
             } else if (to_write > 0) {
-                memcpy(PHYSICAL_TO_VIRTUAL(page), (char*) program + program_header.p_offset + j * PAGE_SIZE, to_write); // assumes pages returned by phys_alloc_page are identity mapped
+                memcpy(PHYSICAL_TO_VIRTUAL(page), (char*) program + program_header.p_offset + j * PAGE_SIZE, to_write);
                 memset(PHYSICAL_TO_VIRTUAL(page + to_write), 0, PAGE_SIZE - to_write);
 
                 to_write = 0;
@@ -144,7 +144,7 @@ int task_create(void *program, uint64_t size)
                 memset(PHYSICAL_TO_VIRTUAL(page), 0, PAGE_SIZE);
             }
 
-            virt_map(page_map, program_header.p_vaddr, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
+            virt_map(page_map, program_header.p_vaddr + j * PAGE_SIZE, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
         }
     }
 
