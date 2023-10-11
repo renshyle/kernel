@@ -40,6 +40,7 @@ common_interrupt_handler:
     push r15
 
     cld
+    xor rbp, rbp
     call interrupt
 
     pop r15

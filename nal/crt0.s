@@ -1,7 +1,7 @@
 extern main
 global _start
 
-SYS_EXIT equ 0
+%include "syscalls.inc"
 
 section .data
 argv: dq 0

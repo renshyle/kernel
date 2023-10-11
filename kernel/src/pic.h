@@ -19,5 +19,6 @@ uint8_t pic_read_isr(uint16_t pic);
 
 bool pic_is_irq_spurious(int irq);
 void pic_eoi(int irq);
+void pic_spurious_eoi(int irq);
 
 #endif

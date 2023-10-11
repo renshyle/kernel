@@ -57,6 +57,13 @@ void pic_eoi(int irq)
     outb(PIC1_COMMAND, PIC_EOI);
 }
 
+void pic_spurious_eoi(int irq)
+{
+    if (irq == 15) {
+        outb(PIC1_COMMAND, PIC_EOI);
+    }
+}
+
 uint8_t pic_read_isr(uint16_t pic)
 {
     return inb(pic - 1);

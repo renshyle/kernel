@@ -76,11 +76,11 @@ void kentry(void)
     pit_init();
     int_init();
     pic_init();
-    task_init();
-    syscall_init();
     virt_init(kernel_address_request.response->physical_base);
     // from this point all physical addresses should be accessed with PHYSICAL_TO_VIRTUAL()
     // and limine provided memory should be accessesd using LIMINE_ADDR_TO_VIRTUAL()
+    task_init();
+    syscall_init();
 
     // load modules
     if (module_request.response == NULL) {

@@ -3,8 +3,14 @@
 
 #include <stdint.h>
 
+#include "task.h"
+
 #define IDT_ATTR_INTERRUPT_GATE 0x0e00
 #define IDT_ATTR_PRESENT 0x8000
+
+#define MAX_IRQS 16
+
+extern struct task *irq_handlers[MAX_IRQS];
 
 struct __attribute__((__packed__)) interrupt_frame {
     uint64_t r15;

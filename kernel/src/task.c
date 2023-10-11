@@ -5,9 +5,10 @@
 #include <string.h>
 
 #include "debug.h"
+#include "int.h"
 #include "panic.h"
-#include "pit.h"
 #include "phys.h"
+#include "pit.h"
 #include "task.h"
 #include "virt.h"
 
@@ -61,6 +62,8 @@ struct tss tss;
 struct task *task_llist;
 struct task *current_task;
 
+struct signal_queue signal_queue;
+
 extern int kernel_stack;
 
 void task_init(void)
@@ -68,6 +71,11 @@ void task_init(void)
     tss.iopb = sizeof(struct tss); // iopb not used
     tss.rsp0 = (uint64_t) &kernel_stack; // single kernel stack for all tasks
     tss_load();
+
+    signal_queue.signals = malloc(SIGNAL_QUEUE_MIN_SIZE * sizeof(struct signal));
+    signal_queue.size = SIGNAL_QUEUE_MIN_SIZE;
+    signal_queue.i = 0;
+    signal_queue.len = 0;
 }
 
 int task_create(void *program, uint64_t size)
@@ -166,11 +174,30 @@ int task_create(void *program, uint64_t size)
         virt_map(page_map, stack_address + i * PAGE_SIZE, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
     }
 
-    task->rip = header->e_entry;
-    task->cs = 0x20 | 3;
-    task->ss = 0x18 | 3;
-    task->rflags = 0x202; // interrupts enabled
-    task->rsp = stack_address + TASK_STACK_SIZE;
+    // allocate a stack for any signal handlers
+
+    uint64_t signal_stack_address = virt_find_free_area(page_map, TASK_STACK_SIZE / PAGE_SIZE, VIRT_FLAG_USER);
+
+    if (signal_stack_address == 0) {
+        panic("out of memory");
+    }
+
+    for (int i = 0; i < TASK_STACK_SIZE / PAGE_SIZE; i++) {
+        uint64_t page = phys_alloc_page();
+
+        if (page == 0) {
+            panic("out of memory");
+        }
+
+        virt_map(page_map, signal_stack_address + i * PAGE_SIZE, page, VIRT_FLAG_USER | VIRT_FLAG_ALLOC);
+    }
+
+    task->cpu_state.rip = header->e_entry;
+    task->cpu_state.cs = 0x20 | 3;
+    task->cpu_state.ss = 0x18 | 3;
+    task->cpu_state.rflags = 0x202; // interrupts enabled
+    task->cpu_state.rsp = stack_address + TASK_STACK_SIZE;
+    task->signal_stack = signal_stack_address + TASK_STACK_SIZE;
 
     if (task_llist == NULL) {
         task_llist = task;
@@ -186,6 +213,24 @@ void task_end(struct task *task)
 {
     if (current_task == task) {
         current_task = NULL;
+    }
+
+    // remove any irq signal handlers
+
+    for (size_t i = 0; i < MAX_IRQS; i++) {
+        if (irq_handlers[i] == current_task) {
+            irq_handlers[i] = NULL;
+        }
+    }
+
+    // remove all pending signals to the task
+
+    for (size_t i = signal_queue.i; i < signal_queue.len; i++) {
+        struct signal signal = signal_queue.signals[i % signal_queue.size];
+
+        if (signal.task == task) {
+            signal.task = NULL;
+        }
     }
 
     // remove task from the task linked list
@@ -210,6 +255,80 @@ void task_end(struct task *task)
     free(task);
 }
 
+struct signal signal_queue_pop(void)
+{
+    for (size_t i = signal_queue.i; i < signal_queue.len + signal_queue.i; i++) {
+        struct signal signal = signal_queue.signals[i % signal_queue.size];
+
+        if (signal.task == NULL) {
+            continue;
+        }
+
+        if (signal.task->is_in_signal) {
+            continue;
+        }
+
+        if (i == signal_queue.i) {
+            signal_queue.i = (signal_queue.i + 1) % signal_queue.size;
+            signal_queue.len--;
+        } else {
+            signal_queue.signals[i % signal_queue.size].task = NULL;
+
+
+            size_t j;
+            for (j = i; j < signal_queue.len + signal_queue.i; j++) {
+                struct signal signal1 = signal_queue.signals[j % signal_queue.size];
+
+                if (signal1.task != NULL) {
+                    break;
+                }
+            }
+
+            signal_queue.len -= j - i;
+            signal_queue.i = j % signal_queue.size;
+        }
+
+        return signal;
+    }
+
+    return (struct signal) { .task = NULL };
+}
+
+void signal_queue_push(struct signal signal)
+{
+    if (signal_queue.len == signal_queue.size) {
+        // TODO: embiggen the signal queue if full
+        panic("signal queue full");
+    }
+
+    signal_queue.signals[(signal_queue.i + signal_queue.len) % signal_queue.size] = signal;
+    signal_queue.len++;
+}
+
+noreturn void task_dispatch_signal(struct signal signal)
+{
+    struct task *task = signal.task;
+
+    if (task->signal_entry == 0) {
+        panic("tried to dispatch signal to task with no signal handler");
+    }
+
+    memcpy(&task->signal_saved_state, &task->cpu_state, sizeof(struct task_cpu_state));
+
+    memset(&task->cpu_state, 0, sizeof(struct task_cpu_state));
+    task->cpu_state.rip = task->signal_entry;
+    task->cpu_state.cs = 0x20 | 3;
+    task->cpu_state.ss = 0x18 | 3;
+    task->cpu_state.rflags = 0x202;
+    task->cpu_state.rsp = task->signal_stack;
+    task->cpu_state.rdi = signal.type;
+
+    task->is_in_signal = true;
+    task->current_signal = signal;
+
+    task_switch(task);
+}
+
 // task_user_switch should only be called by task_switch
 extern noreturn void task_user_switch(struct task task);
 
@@ -227,6 +346,13 @@ noreturn void task_switch(struct task *task)
 noreturn void task_schedule(void)
 {
     struct task *task = NULL;
+
+    // dispatch the first signal in the signal queue if one exists
+    struct signal signal = signal_queue_pop();
+
+    if (signal.task != NULL) {
+        task_dispatch_signal(signal);
+    }
 
     if (current_task == NULL) {
         if (task_llist != NULL) {
